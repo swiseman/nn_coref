@@ -1,0 +1,6 @@
+package edu.berkeley.nlp.coref;
+
+
+public enum ConjType {
+  NONE, TYPE, TYPE_OR_RAW_PRON, CANONICAL, CANONICAL_NOPRONPRON, CANONICAL_ONLY_PAIR_CONJ, CANONICAL_OR_COMMON;
+}
