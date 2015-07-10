@@ -14,6 +14,8 @@ import edu.berkeley.nlp.coref.PronounDictionary
 import edu.berkeley.nlp.coref.Mention
 import edu.berkeley.nlp.coref.MentionType
 
+// A modified version of BCS's PairwiseIndexingFeaturizerJoint.scala
+
 @SerialVersionUID(1L)
 class SeparatingFeaturizer(val featureIndexer: Indexer[String], 
                                       val featsToUse: String, 

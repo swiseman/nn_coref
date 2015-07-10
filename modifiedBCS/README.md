@@ -2,21 +2,21 @@
 
 This directory contains the code necessary for extracting features and "oracle predicted clusters" (which are used as supervision) from the English CoNLL data. 
 
-We use code written on top of the Berkeley Coref System (BCS) v1.1 (see [http://nlp.cs.berkeley.edu/projects/coref.shtml]) to extract features, and so we have included the BCS v1.1 code along with its license and dependencies here. The BCS code is in src/main/java/edu/berkeley/* and any additional code we have added is in src/main/java/edu/harvard/* .
+We use code written on top of the Berkeley Coref System (BCS) v1.1 (see http://nlp.cs.berkeley.edu/projects/coref.shtml) to extract features, and so we have included the BCS v1.1 code along with its license and dependencies here. The BCS code is in src/main/java/edu/berkeley/* and any additional code we have added is in src/main/java/edu/harvard/* .
 
 ## Compilation
 
-You should use sbt to compile the scala and java source. After downloading sbt ([www.scala-sbt.org]), simply type
+Although we provide a pre-compiled jar ("moarcoref-assembly-1.jar") in the modifiedBCS/ directory, you can use sbt to re-compile the scala and java source. After downloading sbt (www.scala-sbt.org), simply type
   
 ```
 sbt assembly
 ```
 
-from inside the modifiedBCS/ directory, which will produce a runnable jar in the target/ subdirectory. We have also included a pre-compiled jar in the main modifiedBCS/ directory.
+from inside the modifiedBCS/ directory, which will produce a runnable jar in the target/ subdirectory.
 
 ## Data Prerequisites
 
-To extract features you will need the CoNLL 2012 English train, development, and test data, as well as the number and gender data that goes along with it. See [http://conll.cemantix.org/2012/data.html] for instructions on downloading and extracting it. 
+To extract features you will need the CoNLL 2012 English train, development, and test data, as well as the number and gender data that goes along with it. See http://conll.cemantix.org/2012/data.html for instructions on downloading and extracting it. 
 
 BCS expects the CoNLL data to be in a flattened directories, so that all train, development, and test files are in flat train, development, and test directories (resp.).  If you've extracted the CoNLL data into a top-level directory called conll-2012/, you can create a flattened train directory flat_train_2012/ using the following python code:
 
@@ -26,30 +26,34 @@ import shutil
 import os
 
 def flatten(root_dir,flat_dir,file_suf="auto_conll"):
+    if not os.path.exists(flat_dir):
+        os.makedirs(flat_dir)
+    
     matches = subprocess.check_output("find %s -name *%s" % (root_dir,file_suf),shell=True)
     matches = matches.split('\n')[:-1]
     for match in matches:
         match_fields = match.split('/')
         shutil.copyfile(match, os.path.join(flat_dir,match_fields[-4]+"_"+match_fields[-1]))
 
-flatten("conll-2012/v4/data/train/", "flat_train_2012")
+
+flatten("conll-2012/v4/data/train/data/english", "flat_train_2012")
 ```
 
 The same goes for creating flattened development and test directories.
 
-You will also need the list of animate and inanimate unigrams used by the Stanford Coref system. These can be found in the Stanford CoreNLP models jar under edu.stanford.nlp.models/dcoref, and they are also included here.
+You will also need the list of animate and inanimate unigrams used by the Stanford Coref system. These can be found in the Stanford CoreNLP models jar under edu.stanford.nlp.models.dcoref .
 
 ## Running
 
 To extract the Basic+ features described in the paper, first create a directory to store log files (say, `execdir'), and then type the following
 
 ```
-java -jar -Xmx30g modifiedBCS/target/scala-2.11/moarcoref-assembly-1.jar ++modifiedBCS/base.conf -execDir execdir -numberGenderData gender.data -animacyPath animate.unigrams.txt -inanimacyPath inanimate.unigrams.txt -trainPath flat_train_2012 -devPath flat_dev_2012 -testPath flat_dev_2012 -pairwiseFeats FINAL,MOARANAPH,MOARPW+bilexical -conjType NONE
+java -jar -Xmx30g modifiedBCS/target/scala-2.11/moarcoref-assembly-1.jar ++modifiedBCS/base.conf -execDir execdir -numberGenderData gender.data -animacyPath animate.unigrams.txt -inanimacyPath inanimate.unigrams.txt -trainPath flat_train_2012 -devPath flat_dev_2012 -testPath flat_test_2012 -pairwiseFeats FINAL+MOARANAPH+MOARPW+bilexical -conjType NONE
 ```
 
 The above assumes the gender and animacy files are in the current directory, and that the flattened CoNLL directories are flat_train_2012/, flat_dev_2012/, and flat_test_2012/. 
 
-The argument to pairwiseFeats specifies which features to extract. The argument `FINAL,MOARANAPH,MOARPW+bilexical` corresponds to the Basic+ features described in the paper. The argument `FINAL` corresponds to the Basic feature set. We use the NONE argument to conjType for all experiments.
+The argument to pairwiseFeats specifies which features to extract. The argument `FINAL+MOARANAPH+MOARPW+bilexical` corresponds to the Basic+ features described in the paper. The argument `FINAL` corresponds to the Basic feature set. We use the NONE argument to conjType for all experiments.
 
 There are additional options described in edu.harvard.nlp.moarcoref.MiniDriver.java.
 
@@ -57,7 +61,7 @@ There are additional options described in edu.harvard.nlp.moarcoref.MiniDriver.j
 
 Running as above should give you 10 files, as follows:
 
- - NONE-FINAL,MOARANAPH,MOARPW+bilexical-anaph\[Train|Dev|Test\]Feats.txt
+ - NONE-FINAL+MOARANAPH+MOARPW+bilexical-anaph\[Train|Dev|Test\]Feats.txt
  
      Anaphoricity features. These files put each document on its own line, with each line having the following format:
      
@@ -67,7 +71,7 @@ Running as above should give you 10 files, as follows:
      
      where n is the number of mentions in the document.
      
- - NONE-FINAL,MOARANAPH,MOARPW+bilexical-pw\[Train|Dev|Test\]Feats.txt
+ - NONE-FINAL+MOARANAPH+MOARPW+bilexical-pw\[Train|Dev|Test\]Feats.txt
  
      Pairwise features. These files put each document on its own line, with each line having the following format:
      
@@ -77,7 +81,7 @@ Running as above should give you 10 files, as follows:
      
      As such, there are n(n+1)/2 cells containing features on each line (one for each pair of mention-antecedent pairs plus self-link mention-mention pairs), and n(n+1)/2+1 cells in total, because the first cell contains the number of mentions. Since the pairwise features do not make sense for the self-link mention-mention pairs, we simply insert a dummy integer in the corresponding cell. 
      
- - NONE-FINAL,MOARANAPH,MOARPW+bilexical-\[anaph|pw\]Mapping.txt
+ - NONE-FINAL+MOARANAPH+MOARPW+bilexical-\[anaph|pw\]Mapping.txt
      
      A file mapping feature index numbers to feature descriptions. Each feature is on its own line, and the format is:
      
