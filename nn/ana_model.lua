@@ -212,7 +212,7 @@ cmd:option('-anaTrFeatPfx', 'train_basicp', 'expects train features in <anaTrFea
 cmd:option('-anaDevFeatPfx', 'dev_basicp', 'expects dev features in <anaDevFeatPfx>-na-*.h5')
 cmd:option('-c0', 1, 'false positive cost')
 cmd:option('-c1', 1.4, 'false negative cost')
-cmd:option('-nEpochs', 10, 'number of epochs to train')
+cmd:option('-nEpochs', 9, 'number of epochs to train')
 cmd:option('-save', false, 'save best model')
 cmd:option('-savePfx', '', 'prefixes saved model with this')
 cmd:option('-t', 2, "Number of threads")

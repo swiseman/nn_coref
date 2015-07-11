@@ -3,6 +3,7 @@
 import os
 import shutil
 import subprocess as sub
+import sys
 
 # This script is intended to show how to reproduce the experiments in the paper,
 # and to provide a single executable for accomplishing this. It may be faster or
@@ -66,30 +67,40 @@ def make_keyfiles():
 def extract_modifiedBCS_features_and_OPCs():
     if not os.path.exists(EXECDIR):
         os.makedirs(EXECDIR)
-    mod_bcs_cmd = "java -jar -Xmx%dg modifiedBCS/moarcoref-assembly-1.jar"
-    " ++modifiedBCS/base.conf -execDir %s -numberGenderData %s -animacyPath %s"
-    " -inanimacyPath %s -trainPath %s -devPath %s -testPath %s -pairwiseFeats %s"
+    mod_bcs_cmd = "java -jar -Xmx%dg modifiedBCS/moarcoref-assembly-1.jar"\
+    " ++modifiedBCS/base.conf -execDir %s -numberGenderData %s -animacyPath %s"\
+    " -inanimacyPath %s -trainPath %s -devPath %s -testPath %s -pairwiseFeats %s"\
     " -conjType NONE" % (MAX_JAVA_GB,EXECDIR,NG_PATH,AN_PATH,INAN_PATH,FLAT_TRAIN,FLAT_DEV,FLAT_TEST,FEATS)
     print "running: %s" % mod_bcs_cmd
+    sys.stdout.flush()
     sub.call(mod_bcs_cmd,shell=True)
 
 def text_feats_to_hdf5():
-   tr_cmd = "python text_feats_to_hdf5.py -n %d %s-%s %s %s"
-   dev_cmd = "python text_feats_to_hdf5.py -n %d -t %s-%s %s %s"
+    """
+    assumes in nn/ directory
+    """
+    tr_cmd = "python text_feats_to_hdf5.py -n %d ../NONE-%s-%s %s %s"
+    dev_cmd = "python text_feats_to_hdf5.py -n %d -t ../NONE-%s-%s %s %s"
    
-   # convert pairwise train features
-   sub.call(tr_cmd % (NUM_CONVERT_PROCS,FEATS,"pwTrainFeats.txt","train_"+FEAT_SET_ABBREV,"pw"), shell=True)
-   # convert pairwise dev features
-   sub.call(dev_cmd % (NUM_CONVERT_PROCS,FEATS,"pwDevFeats.txt","dev_"+FEAT_SET_ABBREV,"pw"), shell=True)
-   # convert pairwise test features
-   sub.call(dev_cmd % (NUM_CONVERT_PROCS,FEATS,"pwTestFeats.txt","test_"+FEAT_SET_ABBREV,"pw"), shell=True)
+    # convert pairwise train features
+    sub.call(tr_cmd % (NUM_CONVERT_PROCS,FEATS,"pwTrainFeats.txt","train_"+FEAT_SET_ABBREV,"pw"), shell=True)
+    # convert pairwise dev features
+    sub.call(dev_cmd % (NUM_CONVERT_PROCS,FEATS,"pwDevFeats.txt","dev_"+FEAT_SET_ABBREV,"pw"), shell=True)
+    # convert pairwise test features
+    sub.call(dev_cmd % (NUM_CONVERT_PROCS,FEATS,"pwTestFeats.txt","test_"+FEAT_SET_ABBREV,"pw"), shell=True)
 
-   # convert anaphoricity train features
-   sub.call(tr_cmd % (NUM_CONVERT_PROCS,FEATS,"anaphTrainFeats.txt","train_"+FEAT_SET_ABBREV,"ana"), shell=True)
-   # convert anaphoricity dev features
-   sub.call(dev_cmd % (NUM_CONVERT_PROCS,FEATS,"anaphDevFeats.txt","dev_"+FEAT_SET_ABBREV,"ana"), shell=True)
-   # convert anaphoricity test features
-   sub.call(dev_cmd % (NUM_CONVERT_PROCS,FEATS,"anaphTestFeats.txt","test_"+FEAT_SET_ABBREV,"ana"), shell=True)
+    # convert anaphoricity train features
+    sub.call(tr_cmd % (NUM_CONVERT_PROCS,FEATS,"anaphTrainFeats.txt","train_"+FEAT_SET_ABBREV,"ana"), shell=True)
+    # convert anaphoricity dev features
+    sub.call(dev_cmd % (NUM_CONVERT_PROCS,FEATS,"anaphDevFeats.txt","dev_"+FEAT_SET_ABBREV,"ana"), shell=True)
+    # convert anaphoricity test features
+    sub.call(dev_cmd % (NUM_CONVERT_PROCS,FEATS,"anaphTestFeats.txt","test_"+FEAT_SET_ABBREV,"ana"), shell=True)
+
+def compile_lua_modules():
+    """
+    assumes in nn/ directory
+    """
+    sub.call("luarocks make rocks/cr-scm-1.rockspec", shell=True)
 
 def make_train_prereq_dirs():
     """
@@ -106,30 +117,34 @@ def pretrain():
     """
     assumes in nn/ directory
     """
-    anaph_pt_cmd = "th ana_model.lua -anaTrFeatPfx %s -anaDevFeatPfx %s"
+    anaph_pt_cmd = "th ana_model.lua -anaTrFeatPfx %s -anaDevFeatPfx %s"\
     " -save -savePfx %s" % ("train_"+FEAT_SET_ABBREV, "dev_"+FEAT_SET_ABBREV, FEAT_SET_ABBREV)
     print "running: %s" % anaph_pt_cmd
+    sys.stdout.flush()
     sub.call(anaph_pt_cmd, shell=True)
     
-    ante_pt_cmd = "th ante_model.lua -pwTrFeatPfx %s -pwDevFeatPfx %s"
+    ante_pt_cmd = "th ante_model.lua -pwTrFeatPfx %s -pwDevFeatPfx %s"\
     " -save -savePfx %s" % ("train_"+FEAT_SET_ABBREV, "dev_"+FEAT_SET_ABBREV, FEAT_SET_ABBREV)
     print "running: %s" % ante_pt_cmd
+    sys.stdout.flush()
     sub.call(ante_pt_cmd, shell=True)
 
 def train():
     tmplt = "th %s -pwTrFeatPfx %s -anaTrFeatPfx %s %s"
-    pt_opts = "-antePTSerFi models/%s_700.model-pw-0.100000-0.000010"
-    " -anaphPTSerFi models/%s_128.model-na-0.100000-0.000010" % (FEAT_SET_ABBREV)   
+    pt_opts = "-antePTSerFi models/%s_700.model-pw-0.100000-0.000010"\
+    " -anaphPTSerFi models/%s_128.model-na-0.100000-0.000010" % (FEAT_SET_ABBREV,FEAT_SET_ABBREV)   
     cmd = None 
     if PRETRAIN:
         cmd = tmplt % ("full_g1_model.lua" if FULL_MODEL == "g1" else "full_g2_model.lua",
                       "train_"+FEAT_SET_ABBREV, "train_"+FEAT_SET_ABBREV, pt_opts)
-        print "running: " % cmd
+        print "running: %s" % cmd
+        sys.stdout.flush()
         sub.call(cmd,shell=True)
     else:
         cmd = tmplt % ("full_g1_model.lua" if FULL_MODEL == "g1" else "full_g2_model.lua",
                       "train_"+FEAT_SET_ABBREV, "train_"+FEAT_SET_ABBREV, "-random_init")
-        print "running: " % cmd
+        print "running: %s" % cmd
+        sys.stdout.flush()
         sub.call(cmd,shell=True) 
 
 def predict(pfx="dev_"):
@@ -141,6 +156,7 @@ def predict(pfx="dev_"):
     cmd = tmplt % ("full_g1_model.lua" if FULL_MODEL == "g1" else "full_g2_model.lua",
                   pfx+FEAT_SET_ABBREV,pfx+FEAT_SET_ABBREV,load_pw,load_ana)
     print "running: " % cmd
+    sys.stdout.flush()
     sub.call(cmd,shell=True)
 
 def get_conll_fmt_output(dev=True):
@@ -157,13 +173,15 @@ def call_scorer_script(dev=True):
     assumes in main directory
     """
     if dev:
-        out = sub.check_output("reference-coreference-scorers/v8.01/scorer.pl"
+        out = sub.check_output("reference-coreference-scorers/v8.01/scorer.pl"\
         " all dev.key nn/conllouts/load_and_pred.bps.out none", shell=True)
         print "conll scorer output:\n\n%s" % out
+        sys.stdout.flush()
     else:
-        out = sub.check_output("reference-coreference-scorers/v8.01/scorer.pl"
+        out = sub.check_output("reference-coreference-scorers/v8.01/scorer.pl"\
         " all test.key nn/conllouts/load_and_pred.bps.out none", shell=True)
-        print "conll scorer output:\n\n%s" % out        
+        print "conll scorer output:\n\n%s" % out  
+        sys.stdout.flush()      
     
 def main():
     """
@@ -180,6 +198,7 @@ def main():
     text_feats_to_hdf5()
     
     # do training
+    compile_lua_modules()
     make_train_prereq_dirs()  
     
     if PRETRAIN:
