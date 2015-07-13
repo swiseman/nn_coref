@@ -1,6 +1,8 @@
 --[[
    Composite Mirror Descent (with L1 regularization) AdaGrad update.
-   Several implementations of equation (25) in http://www.cs.berkeley.edu/~jduchi/projects/DuchiHaSi10.pdf 
+   Several implementations of equation (25) in "Adaptive Subgradient Methods for
+   Online Learning and Stochastic Optimization," Duchi et al.
+   (http://www.cs.berkeley.edu/~jduchi/projects/DuchiHaSi10.pdf)
 --]]
 
 

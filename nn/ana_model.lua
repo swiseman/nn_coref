@@ -49,7 +49,8 @@ function ANAModel.load(serfi, c0, c1)
     return model
 end 
 
--- this just gets the delta for each datapt based on a slack rescaled (binary) hinge loss
+-- gets the gradient of loss wrt score for each datapt, 
+-- based on a slack rescaled (binary) hinge loss
 function ANAModel:srHingeBackwd(forwardScores, targets)
    -- presumably faster than doing more vectorized stuff
    local delt = torch.Tensor(targets:size(1))
@@ -69,11 +70,10 @@ function ANAModel:srHingeBackwd(forwardScores, targets)
 end
 
 
---[[ 
-   - computes gradients assuming parameters have been zeroed out
-   - naData is an SpDMData
---]]    
-function ANAModel:docGrad(d,naData,targets)
+-- computes gradients assuming parameters have been zeroed out
+-- naData is an SpDMData   
+function ANAModel:miniBatchGrad(d,naData,targets)
+    -- use doc-sized mini batches
     local docMB = naData:docMiniBatch(d)
     local scores = self.naNet:forward(docMB)
     local delts = self:srHingeBackwd(scores,targets[d])
@@ -105,7 +105,7 @@ function ANAModel:train(naTrData,trTargets,naDevData,devTargets,eta,lamb,
           end 
 
           self.naNet:zeroGradParameters()
-          self:docGrad(d,naTrData,trTargets)
+          self:miniBatchGrad(d,naTrData,trTargets)
           cmdAdaGradC(self.naNet:get(1).weight, self.naNet:get(1).gradWeight,
                       eta, lamb, self.nastates[1])
           cmdAdaGradC(self.naNet:get(3).bias, self.naNet:get(3).gradBias, 
@@ -205,19 +205,19 @@ cmd:text()
 cmd:text('Training anaph model')
 cmd:text()
 cmd:text('Options')
-cmd:option('-hidden_unary', 128, 'Hidden layer size')
-cmd:option('-trainClustFi', '../TrainOPCs.txt', 'Train Oracle Predicted Clustering File')
-cmd:option('-devClustFi', '../DevOPCs.txt', 'Dev Oracle Predicted Clustering File')
-cmd:option('-anaTrFeatPfx', 'train_basicp', 'expects train features in <anaTrFeatPfx>-na-*.h5')
-cmd:option('-anaDevFeatPfx', 'dev_basicp', 'expects dev features in <anaDevFeatPfx>-na-*.h5')
-cmd:option('-c0', 1, 'false positive cost')
-cmd:option('-c1', 1.4, 'false negative cost')
-cmd:option('-nEpochs', 9, 'number of epochs to train')
-cmd:option('-save', false, 'save best model')
-cmd:option('-savePfx', '', 'prefixes saved model with this')
+cmd:option('-hiddenUnary', 128, 'Hidden layer size')
+cmd:option('-trainClustFile', '../TrainOPCs.txt', 'Train Oracle Predicted Clustering File')
+cmd:option('-devClustFile', '../DevOPCs.txt', 'Dev Oracle Predicted Clustering File')
+cmd:option('-anaTrFeatPrefix', 'train_basicp', 'Expects train anaphoricity features in <anaTrFeatPfx>-na-*.h5')
+cmd:option('-anaDevFeatPrefix', 'dev_basicp', 'Expects dev anaphoricity features in <anaDevFeatPfx>-na-*.h5')
+cmd:option('-c0', 1, 'False positive cost')
+cmd:option('-c1', 1.4, 'False negative cost')
+cmd:option('-nEpochs', 9, 'Number of epochs to train')
+cmd:option('-save', false, 'Save best model')
+cmd:option('-savePrefix', 'basicp', 'Prefixes saved model with this')
 cmd:option('-t', 2, "Number of threads")
-cmd:option('-eta', 0.1, 'adagrad learning rate')
-cmd:option('-lamb', 0.00001, 'l1 regularization coefficient')
+cmd:option('-eta', 0.1, 'Adagrad learning rate')
+cmd:option('-lamb', 0.00001, 'L1 regularization coefficient')
 cmd:text()
 
 -- Parse input options
@@ -230,22 +230,22 @@ print("Using " .. tostring(torch.getnumthreads()) .. " threads")
 
 
 function main()
-    local anaTrData = SpDMData.loadFromH5(options.anaTrFeatPfx)
+    local anaTrData = SpDMData.loadFromH5(options.anaTrFeatPrefix)
     print("read anaph train data")
     print("max ana feature is: " .. anaTrData.maxFeat)
-    local anaDevData = SpDMData.loadFromH5(options.anaDevFeatPfx)
+    local anaDevData = SpDMData.loadFromH5(options.anaDevFeatPrefix)
     print("read anaph dev data") 
-    local trClusts = getOPCs(options.trainClustFi,anaTrData)
+    local trClusts = getOPCs(options.trainClustFile,anaTrData)
     print("read train clusters")
-    local devClusts = getOPCs(options.devClustFi,anaDevData)
+    local devClusts = getOPCs(options.devClustFile,anaDevData)
     print("read dev clusters")
     -- make targets for training     
     local trTargets = makeTargets(anaTrData,trClusts)
     local devTargets = makeTargets(anaDevData,devClusts)
 
-    local anaModel = ANAModel.make(anaTrData.maxFeat, options.hidden_unary, options.c0, options.c1)
+    local anaModel = ANAModel.make(anaTrData.maxFeat, options.hiddenUnary, options.c0, options.c1)
     anaModel:train(anaTrData,trTargets,anaDevData,devTargets,options.eta,options.lamb,
-                   options.nEpochs, options.save, options.savePfx)
+                   options.nEpochs, options.save, options.savePrefix)
 end
 
 main()
