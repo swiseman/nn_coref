@@ -144,17 +144,19 @@ def predict(opt, pfx="dev_"):
     if opt.full_model == "g1":
         modelname = "g1"
         luafile = "full_g1_model.lua"
+        saved_model_pfx = opt.feat_set_abbrev
     else:
         modelname = "g2"
         luafile = "full_g2_model.lua"
+        saved_model_pfx = opt.feat_set_abbrev + "_128"
     if opt.no_pretrain:
         initname = "RI"
     else:
         initname = "PT"
     load_pw = ("-pwFullSerFile models/%s-0.500000-1.200000-1.000000.model-full_%s_%s-pw" 
-                % (opt.feat_set_abbrev, modelname, initname))
+                % (saved_model_pfx, modelname, initname))
     load_ana = ("-anaFullSerFile models/%s-0.500000-1.200000-1.000000.model-full_%s_%s-na" 
-                % (opt.feat_set_abbrev, modelname, initname))
+                % (saved_model_pfx, modelname, initname))
     cmd = tmplt % (luafile, pfx+opt.feat_set_abbrev, pfx+opt.feat_set_abbrev, load_pw, load_ana)
     print "running: %s" % cmd
     sys.stdout.flush()
@@ -164,6 +166,8 @@ def get_conll_fmt_output(opt, dev=True):
     """
     Assumes caller in modifiedBCS/ directory.
     """
+    print "getting predictions in CoNLL format..."
+    sys.stdout.flush()
     sub.call("chmod +x WriteCoNLLPreds.sh", shell=True)
     if dev:
         sub.call("./WriteCoNLLPreds.sh ../nn/bps ../nn/conllouts ../%s ../gender.data" % opt.flat_dev, shell=True)

@@ -96,6 +96,3 @@ object BP2CoNLL {
 }
 
 BP2CoNLL.main(args)
-
-// ./WriteCoNLLPreds.sh ../nn/bps ../nn/conllouts ../flat_dev_2012 ../gender.data"
-// ../reference-coreference-scorers/v8.01/scorer.pl all dev.key tnn/conllouts/dev.bps.out none
