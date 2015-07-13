@@ -2,7 +2,7 @@
    Composite Mirror Descent (with L1 regularization) AdaGrad update.
    Several implementations of equation (25) in "Adaptive Subgradient Methods for
    Online Learning and Stochastic Optimization," Duchi et al.
-   (http://www.cs.berkeley.edu/~jduchi/projects/DuchiHaSi10.pdf)
+   (http://www.magicbroom.info/Papers/DuchiHaSi10.pdf)
 --]]
 
 
@@ -91,6 +91,8 @@ RETURN:
 ]]
 
 function cmdAdaGradC(x, g, eta, lamb, state)   
+   assert(x:isContiguous())
+   assert(g:isContiguous())
    local state = state or {}
    local eta = eta or 1e-3
    local lamb = lamb or 1e-5
@@ -99,7 +101,7 @@ function cmdAdaGradC(x, g, eta, lamb, state)
    if not state.paramVariance then
       state.paramVariance = torch.Tensor():typeAs(x):resizeAs(g):zero()
    end
-   
+   assert(state.paramVariance:isContiguous())
    state.paramVariance:addcmul(1,g,g)
    
    -- call c function
@@ -124,7 +126,9 @@ RETURN:
  - nothing
 ]]
 
-function tblCmdAdaGrad(x, g, nzIdxs, eta, lamb, state)   
+function tblCmdAdaGrad(x, g, nzIdxs, eta, lamb, state)  
+   assert(x:isContiguous())
+   assert(g:isContiguous())  
    local state = state or {}
    local eta = eta or 1e-3
    local lamb = lamb or 1e-5
@@ -133,7 +137,7 @@ function tblCmdAdaGrad(x, g, nzIdxs, eta, lamb, state)
    if not state.paramVariance then
       state.paramVariance = torch.Tensor():typeAs(x):resizeAs(g):zero()
    end
-   
+   assert(state.paramVariance:isContiguous())
    x.cr.AG_tbl_update_var(state.paramVariance,g,nzIdxs)
    x.cr.AG_tbl_cmd_adagrad_step(x,g,state.paramVariance,eta,lamb,nzIdxs)
 
@@ -159,7 +163,8 @@ RETURN:
 ]]
 
 function colTblCmdAdaGrad(x, g, nzIdxs, eta, lamb, state)
-   
+   assert(x:isContiguous())
+   assert(g:isContiguous())   
    local state = state or {}
    local eta = eta or 1e-3
    local lamb = lamb or 1e-5
@@ -168,7 +173,7 @@ function colTblCmdAdaGrad(x, g, nzIdxs, eta, lamb, state)
    if not state.paramVariance then
       state.paramVariance = torch.Tensor():typeAs(x):resizeAs(g):zero()
    end
-   
+   assert(state.paramVariance:isContiguous())
    x.cr.AG_col_tbl_update_var(state.paramVariance,g,nzIdxs)
    x.cr.AG_col_tbl_cmd_adagrad_step(x,g,state.paramVariance,eta,lamb,nzIdxs)
 

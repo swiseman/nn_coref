@@ -1,2 +1,2 @@
 More coming soon.
-For now, look at ../do_everything.py .
+For now, look at ../run_experiments.py .
