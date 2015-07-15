@@ -114,8 +114,9 @@ def pretrain(opt):
     sub.call(ante_pt_cmd, shell=True)
 
 def train(opt):
-    tmplt = "th %s -pwTrFeatPrefix %s -anaTrFeatPrefix %s -eta1 %f -eta2 %f -lamb %f %s -save -savePrefix %s"
-    pt_opts = "-antePTSerFile models/%s_700.model-pw-0.100000-0.000010"\
+    tmplt = "th %s -pwTrFeatPrefix %s -anaTrFeatPrefix %s -eta1 %f -eta2 %f -lamb %f"\
+    " -nEpochs %d %s -save -savePrefix %s"
+    pt_path_str = "-antePTSerFile models/%s_700.model-pw-0.100000-0.000010"\
     " -anaphPTSerFile models/%s_128.model-na-0.100000-0.000010" % (opt.feat_set_abbrev,opt.feat_set_abbrev) 
     if opt.full_model == "g1":
         luafile = "full_g1_model.lua"
@@ -123,17 +124,15 @@ def train(opt):
         luafile = "full_g2_model.lua"  
 
     if opt.no_pretrain:
-        cmd = tmplt % (luafile, "train_"+opt.feat_set_abbrev, "train_"+opt.feat_set_abbrev,
-                       opt.eta1, opt.eta2, opt.lamb,"-randomInit", opt.feat_set_abbrev)
-        print "running: %s" % cmd
-        sys.stdout.flush()
-        sub.call(cmd,shell=True) 
+        pt_opt_str = "-randomInit"        
     else:
-        cmd = tmplt % (luafile, "train_"+opt.feat_set_abbrev, "train_"+opt.feat_set_abbrev, 
-                       opt.eta1, opt.eta2, opt.lamb, pt_opts, opt.feat_set_abbrev)
-        print "running: %s" % cmd
-        sys.stdout.flush()
-        sub.call(cmd,shell=True)
+        pt_opt_str = pt_path_str
+        
+    cmd = tmplt % (luafile, "train_"+opt.feat_set_abbrev, "train_"+opt.feat_set_abbrev,
+                    opt.eta1, opt.eta2, opt.lamb,opt.num_epochs,pt_opt_str, opt.feat_set_abbrev)
+    print "running: %s" % cmd
+    sys.stdout.flush()
+    sub.call(cmd,shell=True) 
         
 
 def predict(opt, pfx="dev_"):
@@ -269,7 +268,7 @@ def main():
         opt.no_pretrain = True
         opt.eta1 = 0.1
         opt.eta2 = 0.001
-        opt.lamb = 0.00001
+        opt.lamb = 0.000001
         opt.num_epochs = 11
         opt.no_dev_eval = False
         opt.eval_on_test = False

@@ -238,8 +238,6 @@ end
 -- trains from random init
 function train(pwData,anaData,clusts,pwDevData,anaDevData,hiddenPW,hiddenUnary,fl,fn,wl,
                   eta1,eta2,lamb,nEpochs,save,savePfx,PT,anteSerFi,anaSerFi)
-   local PT = PT or true -- whether to initialize with pretrained params
-   local nEpochs = nEpochs or 5
    local serFi = string.format("models/%s-%f-%f-%f.model", savePfx, fl, fn, wl)
 
    torch.manualSeed(2)
