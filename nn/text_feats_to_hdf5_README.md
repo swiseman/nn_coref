@@ -36,3 +36,5 @@ python text_feats_to_hdf5.py -n 30 -t NONE-FINAL,MOARANAPH,MOARPW+bilexical-anap
 python text_feats_to_hdf5.py -n 30 -t NONE-FINAL,MOARANAPH,MOARPW+bilexical-anaphTestFeats.txt test_basicp ana
 ```
 
+## Additional Assumptions
+The script assumes that the features in the text feature files are 1-indexed (rather than 0-indexed). This is done automatically by the modifiedBCS code, but if you wish to use this script on your own features, you may need to worry about this.
