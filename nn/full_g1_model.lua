@@ -235,7 +235,6 @@ function FullG1Model:docBatchFwd(d,numMents,numPairs,pwData,anaData)
 end
 
 
--- trains from random init
 function train(pwData,anaData,clusts,pwDevData,anaDevData,hiddenPW,hiddenUnary,fl,fn,wl,
                   eta1,eta2,lamb,nEpochs,save,savePfx,PT,anteSerFi,anaSerFi)
    local serFi = string.format("models/%s-%f-%f-%f.model", savePfx, fl, fn, wl)
