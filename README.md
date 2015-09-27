@@ -11,7 +11,7 @@ This directory contains all the code necessary for duplicating our experiments. 
 The script run_experiments.py contains code and commands for duplicating our experiments, from feature extraction from the CoNLL files through training and evaluation. To run this script, you need to have extracted the CoNLL files from OntoNotes using the instructions at http://conll.cemantix.org/2012/data.html, which should give you a single top-level directory containing a hierarchy of CoNLL files.
 
 ## Pre-extracted Features/Saved Models
-Pre-extracted Basic+ features (for train, dev, and test) in can be downloaded here: https://drive.google.com/folderview?id=0B1ytQXPDuw7OYng1SGhFR0hRcnM&usp=sharing
+Pre-extracted Basic+ features (for train, dev, and test) can be downloaded here: https://drive.google.com/folderview?id=0B1ytQXPDuw7OYng1SGhFR0hRcnM&usp=sharing
 
 Saved Models (including antecedent and anaphoricity subtask networks, and g1 and g2 pre-trained networks) can be downloaded here: https://drive.google.com/folderview?id=0B1ytQXPDuw7OeU5ENnZXS0JsNGs&usp=sharing
 
