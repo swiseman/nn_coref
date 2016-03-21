@@ -54,8 +54,9 @@ public class MiniDriver implements Runnable {
   @Option(gloss = "Cutoff below which bilexical features fire backoff indicator feature")
   public static int bilexicalFeatCutoff = 10;  
   
+  
   public static enum Mode {
-    WRITE_FEATS_SEP;
+    WRITE_FEATS_SEP, KEEP_FIRST_ANAPH, MIC, SMALLER;
   }
   
   public static void main(String[] args) {
@@ -65,6 +66,14 @@ public class MiniDriver implements Runnable {
   
   public void run() {
     Logger.setFig();
-    FeatureExtractor.writeSeparatedFeatsAndOraclePredClustering();
+    if (mode.equals(Mode.KEEP_FIRST_ANAPH)){
+    	FeatureExtractor.writeAllAnaphFeats();
+    } else if (mode.equals(Mode.MIC)){
+    	ContextWriter.writeAllMentsInContext();
+    } else if (mode.equals(Mode.SMALLER)) {
+        FeatureExtractor.writeSeparatedFeatsAndOraclePredClustering(true);
+    } else {
+    	FeatureExtractor.writeSeparatedFeatsAndOraclePredClustering(false);
+    }
   }
 }

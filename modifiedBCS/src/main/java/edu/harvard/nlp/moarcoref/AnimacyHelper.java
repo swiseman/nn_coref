@@ -64,7 +64,7 @@ public class AnimacyHelper {
 	}	
 	
 	// mostly stolen from Dictionaries.java in stanfordcorenlp.dcoref
-	private static Set<String> getWordsFromFile(String filename, boolean lowercase) throws IOException{
+	public static Set<String> getWordsFromFile(String filename, boolean lowercase) throws IOException{
 		BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
 		Set<String> words = new HashSet<String>();
 		while (reader.ready()){
