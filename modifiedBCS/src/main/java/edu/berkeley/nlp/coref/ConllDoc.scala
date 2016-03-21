@@ -20,6 +20,24 @@ case class ConllDoc(val docID: String,
   
   val numSents = words.size;
   
+  // updating...blah
+  val allSpeakers = scala.collection.mutable.Set[String]();
+  var gatheredSpeakers = false;
+  
+  def getSpeakers():scala.collection.mutable.Set[String] = {
+    if (gatheredSpeakers){
+      return allSpeakers;
+    } else {
+      for (speakerSent <- speakers){
+        for (speaker <- speakerSent){
+          allSpeakers.add(speaker.replace("-","").replace("_","").replace(".","").toLowerCase);
+        }
+      }
+      gatheredSpeakers = true;
+      return allSpeakers;
+    }
+  }
+  
   def printableDocName = docID + " (part " + docPartNo + ")";
   
   def isConversation = docID.startsWith("bc") || docID.startsWith("wb");
