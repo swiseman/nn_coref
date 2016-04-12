@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 import h5py
 import multiprocessing as mp
@@ -6,7 +5,7 @@ import argparse
 
 ##################### for parsing pairwise feature files #######################
 
-def firstpass_worker(task_q, results_q, check_for_zero):
+def firstpass_worker(task_q, results_q):
     """
     gets mention offsets
     """
@@ -21,16 +20,13 @@ def firstpass_worker(task_q, results_q, check_for_zero):
         for i in xrange(1,ments):
             for j in xrange(i):
                 feats = fields[curr_idx].split(" ")
-                num_zeros = 0
-                if check_for_zero:
-                    num_zeros = sum(fs == "0" for fs in feats)
                 # index where next mention pair's features start
-                ment_starts.append(len(feats)-num_zeros)
+                ment_starts.append(len(feats))
                 curr_idx += 1
             curr_idx += 1
         results_q.put((d,ment_starts))
 
-def firstpass(fi,num_procs,check_for_zero=False):
+def firstpass(fi,num_procs):
     """
     establishes document and mention offsets
     """
@@ -39,7 +35,7 @@ def firstpass(fi,num_procs,check_for_zero=False):
     
     # start worker procs
     for i in xrange(num_procs):
-        mp.Process(target=firstpass_worker, args=(task_q,results_q,check_for_zero)).start()
+        mp.Process(target=firstpass_worker, args=(task_q,results_q)).start()
     
     # assign each line to a worker
     num_docs = 0
@@ -67,7 +63,7 @@ def firstpass(fi,num_procs,check_for_zero=False):
     # now that ment starts are in order we can put back together
     all_ment_starts = [0]
     [all_ment_starts.extend(ment_starts[i]) for i in xrange(num_docs)]
-    return np.cumsum(doc_starts).astype(np.int32), np.cumsum(all_ment_starts).astype(np.int32)
+    return np.cumsum(doc_starts).astype(np.int64), np.cumsum(all_ment_starts).astype(np.int64)
 
 
 def doc_feats_worker(task_q, results_q):
@@ -86,21 +82,22 @@ def doc_feats_worker(task_q, results_q):
             for j in xrange(i):
                 feat_strs = fields[curr_idx].split(" ")
                 # fill in the features starting at offset
-                [doc_feats.append(int(fs)) for fs in feat_strs if fs != "0"]
+                [doc_feats.append(int(fs)) for fs in feat_strs]
                 curr_idx += 1
             curr_idx += 1
-        results_q.put((d,np.array(doc_feats,dtype=np.int32)))
+        results_q.put((d,np.array(doc_feats,dtype=np.int64)))
 
 # this guy will actually make the features                
-def merge_feats_worker(results_q, doc_starts, ment_starts, feat_pfx):
+def merge_feats_worker(results_q, doc_starts, ment_starts, feat_pfx, replacement):
     """
     puts documents' features in correct order and saves matrix in hd5 format
     """
     num_docs = doc_starts.shape[0]-1
-    feats = np.zeros(ment_starts[-1], dtype=np.int32)
+    feats = np.zeros(ment_starts[-1], dtype=np.int64)
     for i in xrange(num_docs):
         print "got doc", i, "merging..."
         d,nz = results_q.get()
+        nz[nz == 0] = replacement
         feats[ment_starts[doc_starts[d]]:ment_starts[doc_starts[d+1]]] = nz
         del nz
     print "saving features in hdf5 format..."
@@ -109,7 +106,7 @@ def merge_feats_worker(results_q, doc_starts, ment_starts, feat_pfx):
     h5fi.close()
        
 
-def secondpass(fi, num_procs, doc_starts, ment_starts, feat_pfx):
+def secondpass(fi, num_procs, doc_starts, ment_starts, feat_pfx, replacement):
     task_q = mp.Queue(num_procs) # ensure can only put num_procs things on the q
     results_q = mp.Queue()
     
@@ -117,7 +114,7 @@ def secondpass(fi, num_procs, doc_starts, ment_starts, feat_pfx):
     for i in xrange(num_procs):
         mp.Process(target=doc_feats_worker, args=(task_q,results_q)).start()
     
-    fbp = mp.Process(target=merge_feats_worker, args=(results_q,doc_starts,ment_starts, feat_pfx))
+    fbp = mp.Process(target=merge_feats_worker, args=(results_q,doc_starts,ment_starts, feat_pfx, replacement))
     fbp.start()
     
     # assign each line to a worker
@@ -140,7 +137,7 @@ def secondpass(fi, num_procs, doc_starts, ment_starts, feat_pfx):
 
 
 ####################### for parsing anaphoricity feature files #################
-def na_firstpass_worker(task_q, results_q, check_for_zero):
+def na_firstpass_worker(task_q, results_q):
     """
     gets mention offsets
     """
@@ -153,16 +150,13 @@ def na_firstpass_worker(task_q, results_q, check_for_zero):
         ments = int(fields[0])
         curr_idx = 2
         for i in xrange(1,ments):
-            feats = fields[curr_idx].split(" ")
-            num_zeros = 0
-            if check_for_zero:
-                num_zeros = sum(fs == "0" for fs in feats)            
+            feats = fields[curr_idx].split(" ")          
             # index where next mention pair's features start
-            ment_starts.append(len(feats) - num_zeros)
+            ment_starts.append(len(feats))
             curr_idx += 1
         results_q.put((d,ment_starts))
 
-def na_firstpass(fi,num_procs,check_for_zero=False):
+def na_firstpass(fi,num_procs):
     """
     establishes document and mention offsets
     """
@@ -171,7 +165,7 @@ def na_firstpass(fi,num_procs,check_for_zero=False):
     
     # start worker procs
     for i in xrange(num_procs):
-        mp.Process(target=na_firstpass_worker, args=(task_q,results_q,check_for_zero)).start()
+        mp.Process(target=na_firstpass_worker, args=(task_q,results_q)).start()
     
     # assign each line to a worker
     num_docs = 0
@@ -199,7 +193,7 @@ def na_firstpass(fi,num_procs,check_for_zero=False):
     # now that ment starts are in order we can put back together
     all_ment_starts = [0]
     [all_ment_starts.extend(ment_starts[i]) for i in xrange(num_docs)]
-    return np.cumsum(doc_starts).astype(np.int32), np.cumsum(all_ment_starts).astype(np.int32)
+    return np.cumsum(doc_starts).astype(np.int64), np.cumsum(all_ment_starts).astype(np.int64)
 
 
 def na_doc_feats_worker(task_q, results_q):
@@ -217,12 +211,12 @@ def na_doc_feats_worker(task_q, results_q):
         for i in xrange(1,ments):
             feat_strs = fields[curr_idx].split(" ")
             # fill in the features starting at offset
-            [doc_feats.append(int(fs)) for fs in feat_strs if fs != "0"]
+            [doc_feats.append(int(fs)) for fs in feat_strs]
             curr_idx += 1
-        results_q.put((d,np.array(doc_feats,dtype=np.int32)))
+        results_q.put((d,np.array(doc_feats,dtype=np.int64)))
 
     
-def na_secondpass(fi, num_procs, doc_starts, ment_starts, feat_pfx):
+def na_secondpass(fi, num_procs, doc_starts, ment_starts, feat_pfx, replacement):
     task_q = mp.Queue(num_procs) # ensure can only put num_procs things on the q
     results_q = mp.Queue()
     
@@ -230,7 +224,7 @@ def na_secondpass(fi, num_procs, doc_starts, ment_starts, feat_pfx):
     for i in xrange(num_procs):
         mp.Process(target=na_doc_feats_worker, args=(task_q,results_q)).start()
     
-    fbp = mp.Process(target=merge_feats_worker, args=(results_q,doc_starts,ment_starts, feat_pfx))
+    fbp = mp.Process(target=merge_feats_worker, args=(results_q,doc_starts,ment_starts, feat_pfx, replacement))
     fbp.start()
     
     # assign each line to a worker
@@ -258,7 +252,7 @@ def main():
     parser.add_argument("pfx", action="store", help="prefix generated hdf5 files with this")
     parser.add_argument("mode", choices=("pw","ana"), action="store", help="pairwise or anaphoricity features in text file")
     parser.add_argument("-n","--num_procs", type=int, action="store", default=3, dest="num_procs", help="number of additional processes to spawn")
-    parser.add_argument("-t", "--test", action="store_true", dest="t", default=False, help="use for test or dev features (removes extraneous features)")
+    parser.add_argument("-r","--replacement", type=int, action="store", default=-1, dest="replacement", help="replacement feature for zeros")
         
     args = parser.parse_args()
     if args.mode == "pw":
@@ -267,9 +261,9 @@ def main():
         feat_pfx = args.pfx + "-na"
         
     if args.mode == "pw":
-        doc_starts, ment_starts = firstpass(args.feature_text_file, args.num_procs, args.t)
+        doc_starts, ment_starts = firstpass(args.feature_text_file, args.num_procs)
     else:
-        doc_starts, ment_starts = na_firstpass(args.feature_text_file, args.num_procs, args.t)
+        doc_starts, ment_starts = na_firstpass(args.feature_text_file, args.num_procs)
     
     print "saving doc_starts and ment_starts in hdf5 format..."
     h5fi = h5py.File('%s-offsets.h5' % (feat_pfx),'w')
@@ -280,9 +274,9 @@ def main():
     print "will now fill in the", ment_starts[-1], "features..."
     if args.mode == "pw":
         # subtract 1 b/c we'll spawn an additional guy to consume worker output
-        secondpass(args.feature_text_file, args.num_procs-1, doc_starts, ment_starts, feat_pfx)
+        secondpass(args.feature_text_file, args.num_procs-1, doc_starts, ment_starts, feat_pfx, args.replacement)
     else:
-        na_secondpass(args.feature_text_file, args.num_procs-1, doc_starts, ment_starts, feat_pfx)
+        na_secondpass(args.feature_text_file, args.num_procs-1, doc_starts, ment_starts, feat_pfx, args.replacement)
 
 if __name__ == "__main__":
     main()
