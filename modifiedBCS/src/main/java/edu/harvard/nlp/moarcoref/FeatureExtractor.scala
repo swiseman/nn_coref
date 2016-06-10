@@ -99,15 +99,7 @@ object FeatureExtractor {
     
     // write dev oracle predicted clustering
     TextPickler.writePredOracleClusterings(devDocGraphs, pfx+"DevOPCs.txt"); 
-    
-    Logger.logss("btw...here are speakers and whatnot");
-    for (dg <- devDocGraphs){
-      for (speaker <- dg.corefDoc.rawDoc.getSpeakers()){
-        Logger.logss(speaker + " ");
-      }
-      Logger.logss("");
-    }
-    
+       
     // do test docs
     devDocs = null;
     devDocGraphs = null;
