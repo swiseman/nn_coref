@@ -2,27 +2,26 @@ local stringx = require('pl.stringx')
 local file = require('pl.file')
 
 --[[ Oracle Predicted Clusters... --]]
-
 do
   local OPClust = torch.class('OPClust')
 
   function OPClust:__init(s,numMents)
-    self.m2c = torch.zeros(numMents)
-    self.clusts = {} -- clusters in order
-    self.mci = torch.zeros(numMents) -- mention cluster idx (which idx w/in its cluster a mention is)
+     self.m2c = torch.zeros(numMents)
+     self.clusts = {} -- clusters in order
+     self.mci = torch.zeros(numMents) -- mention cluster idx (which idx w/in its cluster a mention is)
      
-    local clustStrs = split2(s,"|")
-    for i,clustStr in ipairs(clustStrs) do
-      local clustIdxs = split2(clustStr, " ")
-      table.insert(self.clusts, torch.LongTensor(#clustIdxs):contiguous())
-      for j,idx in ipairs(clustIdxs) do
-        local idxNum = tonumber(idx) + 1 -- make one-indexed
-        self.m2c[idxNum] = i
-        self.clusts[i][j] = idxNum
-        self.mci[idxNum] = j
-      end 
-    end  
-    collectgarbage()
+     local clustStrs = split2(s,"|")
+     for i,clustStr in ipairs(clustStrs) do
+         local clustIdxs = split2(clustStr, " ")
+         table.insert(self.clusts, torch.LongTensor(#clustIdxs):contiguous())
+         for j,idx in ipairs(clustIdxs) do
+             local idxNum = tonumber(idx) + 1 -- make one-indexed
+             self.m2c[idxNum] = i
+             self.clusts[i][j] = idxNum
+             self.mci[idxNum] = j
+         end 
+     end  
+     collectgarbage()
   end
   
   function OPClust:cudify() -- just cudifies actual clusts
@@ -62,7 +61,6 @@ do
 
 end
 
-
 function getOPCs(fi,spDocData)
   local OPCs = {}
   --local d = 1
@@ -88,6 +86,20 @@ function maxGoldAnt(clust,scoreBuf,ment,start)
     return bestIdx    
 end
 
+-- note this returns the true antecedent idx (not a shifted one...)
+function maxGoldAnt2(clust,scoreBuf,ment,start,numAnts)
+    local bestIdx = ment -- by starting this way, if no antecedents w/ in legal distance, just say NA
+    local bestScore = -math.huge
+    local legalAntStart = math.max(1,ment-numAnts)
+    
+    for ant in clust:ants(ment) do
+      if ant >= legalAntStart and scoreBuf[start+ant-legalAntStart+1] > bestScore then
+        bestIdx = ant
+        bestScore = scoreBuf[start+ant-legalAntStart+1]
+      end
+    end
+    return bestIdx    
+end
 
 function getMaxes(mentData,mentDevData,opcs,devOPCs)
   local maxMents = 0
@@ -259,80 +271,36 @@ function calcMaxMents(pwData,anaData,batchSize)
   return maxMentsTbl
 end
 
---[[ matrix initialization --]]
-
--- assumes 2d and that the longer dimension should be sparsely filled in
-function sparseSutsMatInit(W,numNZ,scale)
-  local numNZ = numNZ or 15
-  local scale = scale or 0.25
-  local m = W:size(1)
-  local n = W:size(2)
-  -- zero everything out
-  W:fill(0)
-  if n >= m then -- assume columns are features and rows are hidden dims
-    numNZ = math.min(numNZ,n)
-    for i = 1, m do
-      local perm = torch.randperm(n)
-      -- probably better ways of doing this
-      local r = torch.randn(numNZ)*scale
-      for j = 1, numNZ do
-        W[i][perm[j]] = r[j]
-      end
-    end
-  else -- assume rows are features and columns hidden dims
-    numNZ = math.min(numNZ,m)
-    for j = 1, n do
-      local perm = torch.randperm(m)
-      local r = torch.randn(numNZ)*scale
-      for i = 1, numNZ do
-        W[perm[i]][j] = r[i]
-      end
-    end
-  end
-end
-
-function checkContigAndSutsInit(net,numNZ)
-    local numNZ = numNZ or 15
-    -- make sure contiguous, and do sparse sutskever init while we're at it
-    for layer, mod in ipairs(net.modules) do
-        if mod.weight and mod.weight:size(1) > 1 then -- exclude vectors that are sometimes 1 x n
-            assert(mod.weight:isContiguous())
-            sparseSutsMatInit(mod.weight,numNZ,0.25)
-        elseif mod.weight and mod.weight:size(1) == 1 then
-            assert(mod.weight:isContiguous())
-            mod.weight[1]:randn(mod.weight:size(2))
-        end
-        if mod.bias then
-            assert(mod.bias:isContiguous())
-            mod.bias:fill(0.5)
-        end
-    end
-end
-
-function recSutsInit(net,numNZ) -- assuming no module can have weight and children
-  local numNZ = numNZ or 15
-  if net.weight and net.bias then
-    sparseSutsMatInit(net.weight, math.min(numNZ,net.weight:size(1),net.weight:size(2)))
-    net.bias:fill(0.5)
-  elseif net.weight then
-    sparseSutsMatInit(net.weight, math.min(numNZ,net.weight:size(1),net.weight:size(2)))
-  elseif net.bias then
-    net.bias:fill(0.5)
-  elseif net.modules and #net.modules > 0 then
-    for layer, subnet in ipairs(net.modules) do
-      recSutsInit(subnet, numNZ)
-    end
-  end
+function getDocPosns(numMents,cuda)
+  local docDists = torch.range(1,numMents)
+  docDists:mul(2)
+  docDists:add(-numMents-1)
+  docDists:div(numMents-1) 
+  return cuda and docDists:cuda() or docDists
 end
 
 
-function checkContig(net)
-    for layer, mod in ipairs(net.modules) do
-        if mod.weight then -- exclude vectors that are sometimes 1 x n
-            assert(mod.weight:isContiguous())
-        end
-        if mod.bias then
-            assert(mod.bias:isContiguous())
-        end
+function split2(str, delim, maxNb)
+    -- Eliminate bad cases...
+   if string.find(str, delim) == nil then
+      return { str }
     end
+    if maxNb == nil or maxNb < 1 then
+        maxNb = 0    -- No limit
+    end
+    local result = {}
+    local pat = "(.-)" .. delim .. "()"
+    local nb = 0
+    local lastPos
+    for part, pos in string.gfind(str, pat) do
+        nb = nb + 1
+        result[nb] = part
+        lastPos = pos
+        if nb == maxNb then break end
+    end
+    -- Handle the last field
+    if nb ~= maxNb then
+       result[nb + 1] = string.sub(str, lastPos)
+    end
+    return result
 end

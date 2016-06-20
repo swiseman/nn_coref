@@ -10,13 +10,93 @@ function model_utils.adagradStep(x,dfdx,eta,state)
   x:addcdiv(-eta, dfdx, state.std:add(1e-10))
 end
 
+function model_utils.make_sp_mlp(D,H,zeroLast,justFirstLayer,dop)
+  local mlp = nn.Sequential()
+  mlp:add(nn.LookupTable(D,H))   
+  mlp:add(nn.Sum(2))
+  mlp:add(nn.Add(H)) -- add a bias
+  mlp:add(nn.Tanh())
+  if not justFirstLayer then
+    mlp:add(nn.Dropout(dop or 0.5))
+    mlp:add(nn.Linear(H,1))
+  end
+  -- make sure contiguous, and do sparse sutskever init while we're at it
+  recSutsInit(mlp,15)
+  if zeroLast then
+    mlp:get(1).weight[-1]:fill(0)
+  end
+  return mlp
+end
 
-function model_utils.getDocDists(numMents,cuda)
-  local docDists = torch.range(1,numMents)
-  docDists:mul(2)
-  docDists:add(-numMents-1)
-  docDists:div(numMents-1) 
-  return cuda and docDists:cuda() or docDists
+
+function model_utils.make_sp_and_dense_mlp(spD,dD,H,zeroLast,justFirstLayer,dop)
+  local mlp = nn.Sequential()
+  local parLayer = nn.ParallelTable()
+  local left = nn.Sequential()
+  left:add(nn.LookupTable(spD,H))
+  left:add(nn.Sum(2)) -- after this pt, will have totalNumMents x H
+  local right = nn.Sequential()
+  right:add(nn.Linear(dD,H)) -- just handles the distance feature (and the bias, conveniently)
+  parLayer:add(left)
+  parLayer:add(right)
+  mlp:add(parLayer)
+  mlp:add(nn.CAddTable())
+  mlp:add(nn.Tanh())
+  if not justFirstLayer then
+    mlp:add(nn.Dropout(dop or 0.5))
+    mlp:add(nn.Linear(H,1))
+  end
+  recSutsInit(mlp,15)
+  if zeroLast then
+    mlp:get(1):get(1):get(1).weight[-1]:fill(0)
+  end
+  return mlp
+end
+
+
+function sparseSutsMatInit(W,numNZ,scale)
+  local numNZ = numNZ or 15
+  local scale = scale or 0.25
+  local m = W:size(1)
+  local n = W:size(2)
+  -- zero everything out
+  W:fill(0)
+  if n >= m then -- assume columns are features and rows are hidden dims
+    numNZ = math.min(numNZ,n)
+    for i = 1, m do
+      local perm = torch.randperm(n)
+      -- probably better ways of doing this
+      local r = torch.randn(numNZ)*scale
+      for j = 1, numNZ do
+        W[i][perm[j]] = r[j]
+      end
+    end
+  else -- assume rows are features and columns hidden dims
+    numNZ = math.min(numNZ,m)
+    for j = 1, n do
+      local perm = torch.randperm(m)
+      local r = torch.randn(numNZ)*scale
+      for i = 1, numNZ do
+        W[perm[i]][j] = r[i]
+      end
+    end
+  end
+end
+
+function recSutsInit(net,numNZ) -- assuming no module can have weight and children
+  local numNZ = numNZ or 15
+  if net.weight and net.bias then
+    sparseSutsMatInit(net.weight, math.min(numNZ,net.weight:size(1),net.weight:size(2)))
+    net.bias:fill(0.5)
+  elseif net.weight then
+    sparseSutsMatInit(net.weight, math.min(numNZ,net.weight:size(1),net.weight:size(2)))
+  elseif net.bias then
+    net.bias:fill(0.5)
+  elseif net.modules and #net.modules > 0 then
+    for layer, subnet in ipairs(net.modules) do
+      recSutsInit(subnet, numNZ)
+    end
+  end
 end
 
 -- stolen from https://github.com/karpathy/char-rnn/blob/master/util/model_utils.lua
