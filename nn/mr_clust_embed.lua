@@ -308,10 +308,6 @@ do
   function SavedClustDotModel:writeGreedyBPs(pwDevData,anaDevData,cuda,bpfi)
     local bpfi = bpfi or "bps/dev.bps"
     local ofi = assert(io.open(bpfi,"w"))
---    assert(self.naScorer:get(1):get(1):get(1).weight[-1]:abs():sum() == 0)
---    assert(self.naScorer:get(1):get(2):get(1):get(1):get(1).weight[-1]:abs():sum() == 0)
---    assert(self.pwNet:get(1):get(1):get(1):get(2):get(1).weight[-1]:abs():sum() == 0)
---    assert(self.pwNet:get(1):get(2):get(1):get(1):get(1):get(1):get(1).weight[-1]:abs():sum() == 0)
     assert(self.naScorer.train == false)
     assert(self.pwNet.train == false)
     assert(self.lstm.train == false)
@@ -410,8 +406,7 @@ function train(pwTrData,anaTrData,trOPCs,cdb,pwDevData,anaDevData,devOPCs,devCdb
               fl,fn,wl,nEpochs,save,savePfx,cuda,bpfi,anteSerFi,anaSerFi)
   local maxNumMents, maxNumClusts = getMaxes(anaTrData,anaDevData,trOPCs,devOPCs)
   print(string.format("maxNumMents = %d, maxNumClusts = %d", maxNumMents, maxNumClusts))  
-  local serFi = string.format("models/%s-PHMsg1dot-%d-%d.model", savePfx, Hp, Hs)
-  -- new stuff
+  local serFi = string.format("models/%s-mce-%d-%d.model", savePfx, Hp, Hs)
   local eta0 = 1e-1
   local eta1 = 2e-3
   local eta2 = 1e-2
@@ -453,7 +448,7 @@ function train(pwTrData,anaTrData,trOPCs,cdb,pwDevData,anaDevData,devOPCs,devCdb
         model.pwNet:zeroGradParameters()
         model.lstm:zeroGradParameters()
         model:docGrad(d,pwDocBatch,anaDocBatch,OPCs[qq][d],deltTensor,anaData:numMents(d),cdbs[qq],opts.ldop)
-        
+        -- clip gradients
         model.lstm:get(1).i2g.gradWeight:clamp(-opts.clip, opts.clip)
         model.lstm:get(1).i2g.gradBias:clamp(-opts.clip, opts.clip)
         model.lstm:get(1).o2g.gradWeight:clamp(-opts.clip, opts.clip)
@@ -541,7 +536,6 @@ function predictThings(pwNetFi,naNetFi,lstmFi,pwDevData,anaDevData,cuda,bpfi)
   model.lstm:evaluate()  
   collectgarbage()
   model:writeGreedyBPs(pwDevData,anaDevData,cuda,bpfi)
-  --currF = callCoNLLScript2(bpfi)
 end
 
 -------------------------------------------------------------------------------------------------

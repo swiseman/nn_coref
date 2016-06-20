@@ -69,12 +69,14 @@ object BP2CoNLL {
  
   def main(args: Array[String]) {
     val indir = args(0);
-    val outdir = args(1);
-    val devPath = args(2);    
-    val ngPath = args(3);
+    val bpfi = args(1);
+    val outdir = args(2);
+    val devPath = args(3);    
+    val ngPath = args(4);
     val numberGenderComputer = NumberGenderComputer.readBergsmaLinData(ngPath);
     val devDGs = loadCorefDocs(devPath, -1, numberGenderComputer, false).map(new DocumentGraph(_, false)).sortBy(_.corefDoc.rawDoc.printableDocName);    
-    val files = new File(indir).listFiles().filter(file => file.getAbsolutePath.contains(".bps"));
+    //val files = new File(indir).listFiles().filter(file => file.getAbsolutePath.contains(".bps"));
+    val files = new File(indir).listFiles().filter(file => file.getAbsolutePath.contains(bpfi));
     for (fi <- files) {
       println("doing " + fi.getAbsolutePath());
       val bps = ListBuffer[Array[Int]]();

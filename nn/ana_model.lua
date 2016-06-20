@@ -1,7 +1,7 @@
 require 'nn'
 require 'coref_utils'
 require 'sparse_doc_data'
-local mu = require 'ctx/model_utils'
+local mu = require 'model_utils'
 
 ANAModel = {}
 ANAModel.__index = ANAModel
