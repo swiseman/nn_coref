@@ -4,14 +4,36 @@ Neural Coref Models, as described in
 and
 ["Learning Anaphoricity and Antecedent Ranking Features for Coreference Resolution"](http://people.seas.harvard.edu/~srush/acl15.pdf), Sam Wiseman, Alexander M. Rush, Stuart M. Shieber, and Jason Weston. ACL 2015.
 
-** Code for ``Learning Global Features for Coreference Resolution'' will be added soon!**
-
 For questions/concerns/bugs please contact swiseman@seas.harvard.edu.
 
 
 ## Overview
 
-This directory contains all the code necessary for duplicating our experiments. In particular, the modifiedBCS/ directory contains code for extracting features and for printing out predictions in CoNLL format, and the nn/ directory contains code for training models, saving them, and writing their predictions out. It also contains code for converting text feature files into hdf5 format, which is assumed by the nn/ models. Each of these subdirectories contains its own README; refer there for details. Finally, the run_experiments.py script in the current directory should reproduce our results. See it also for details on running the various pieces of the overall system. 
+To keep things simple, all the ACL code is now in a different branch. This README will cover duplicating the NAACL 2016 results.
+
+## Generating Features
+First see the README in the modifiedBCS/ directory for instructions on setting up the data, and compiling the Scala feature and mention extractor.
+
+Then, run
+
+``` java -jar -Xmx30g modifiedBCS/target/scala-2.11/moarcoref-assembly-1.jar ++modifiedBCS/base.conf -execDir execdir -numberGenderData gender.data -animacyPath animate.unigrams.txt -inanimacyPath inanimate.unigrams.txt -trainPath flat_train_2012 -devPath flat_dev_2012 -testPath flat_test_2012  -mode SMALLER -conjType NONE -pairwiseFeats FINAL+MOARANAPH+MOARPW```
+
+to generate text feature files.
+
+To convert text feature files into hdf5 (to be consumed by Torch), run
+
+```python text_feats_to_hdf5_replacezero.py SMALL-FINAL+MOARANAPH+MOARPW-anaphTrainFeats.txt train_small ana -n 4 -r 14215```
+
+```python text_feats_to_hdf5_replacezero.py SMALL-FINAL+MOARANAPH+MOARPW-anaphDevFeats.txt dev_small ana -n 4 -r 14215```
+
+```python text_feats_to_hdf5_replacezero.py SMALL-FINAL+MOARANAPH+MOARPW-anaphTestFeats.txt test_small ana -n 4 -r 14215```
+
+```python text_feats_to_hdf5_replacezero.py SMALL-FINAL+MOARANAPH+MOARPW-pwTrainFeats.txt train_small pw -n 4 -r 28394```
+
+```python text_feats_to_hdf5_replacezero.py SMALL-FINAL+MOARANAPH+MOARPW-pwDevFeats.txt dev_small pw -n 4 -r 28394```
+
+```python text_feats_to_hdf5_replacezero.py SMALL-FINAL+MOARANAPH+MOARPW-pwTestFeats.txt test_small pw -n 4 -r 28394```
+
 
 ## Running Experiments
 The script run_experiments.py contains code and commands for duplicating our experiments, from feature extraction from the CoNLL files through training and evaluation. To run this script, you need to have extracted the CoNLL files from OntoNotes using the instructions at http://conll.cemantix.org/2012/data.html, which should give you a single top-level directory containing a hierarchy of CoNLL files.
