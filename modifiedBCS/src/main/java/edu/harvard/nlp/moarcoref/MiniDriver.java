@@ -56,7 +56,7 @@ public class MiniDriver implements Runnable {
   
   
   public static enum Mode {
-    WRITE_FEATS_SEP, KEEP_FIRST_ANAPH, MIC, SMALLER;
+    SMALLER;
   }
   
   public static void main(String[] args) {
@@ -66,11 +66,7 @@ public class MiniDriver implements Runnable {
   
   public void run() {
     Logger.setFig();
-    if (mode.equals(Mode.KEEP_FIRST_ANAPH)){
-    	FeatureExtractor.writeAllAnaphFeats();
-    } else if (mode.equals(Mode.MIC)){
-    	ContextWriter.writeAllMentsInContext();
-    } else if (mode.equals(Mode.SMALLER)) {
+    if (mode.equals(Mode.SMALLER)) {
         FeatureExtractor.writeSeparatedFeatsAndOraclePredClustering(true);
     } else {
     	FeatureExtractor.writeSeparatedFeatsAndOraclePredClustering(false);
