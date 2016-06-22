@@ -65,10 +65,12 @@ If you've trained (or downloaded) full model components, you can make prediction
 Training as in the previous sub-section and evaluating as above should produce results very close to those in the NAACL paper, and probably a bit better. After re-training the cleaned-up and re-factored version in this repo, I got P/R/F scores of:
 
 MUC: 77.14/70.12/73.46
-BCUB: 66.43/57.47/61.62
-CEAFe: 62.29/54.01/57.85
-CoNLL: 64.31
 
+BCUB: 66.43/57.47/61.62
+
+CEAFe: 62.29/54.01/57.85
+
+CoNLL: 64.31
 
 ## Training the ACL (non-cluster) Model
 The mention-ranking model from the ACL paper has been re-implemented and considerably simplified in vanilla_mr.lua. It can be run as follows:
