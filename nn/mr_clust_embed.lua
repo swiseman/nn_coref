@@ -407,19 +407,23 @@ function train(pwTrData,anaTrData,trOPCs,cdb,pwDevData,anaDevData,devOPCs,devCdb
   local maxNumMents, maxNumClusts = getMaxes(anaTrData,anaDevData,trOPCs,devOPCs)
   print(string.format("maxNumMents = %d, maxNumClusts = %d", maxNumMents, maxNumClusts))  
   local serFi = string.format("models/%s-mce-%d-%d.model", savePfx, Hp, Hs)
+  -- learning rates that worked well on dev...
   local eta0 = 1e-1
   local eta1 = 2e-3
   local eta2 = 1e-2
   local eta3 = 2e-3
-  local dop = 0.4
-  local bestF = 0
-  local pwDatas = {pwTrData, pwDevData}
-  local anaDatas = {anaTrData, anaDevData}
-  local OPCs = {trOPCs, devOPCs}
-  local cdbs = {cdb, devCdb}
-  print(string.format("doing %f %f %f %f %f", eta0, eta1,eta2,eta3,dop))
+  local pwDatas = {pwTrData}
+  local anaDatas = {anaTrData}
+  local OPCs = {trOPCs}
+  local cdbs = {cdb}
+  if not opts.ignoreDev then
+    table.insert(pwDatas, pwDevData)
+    table.insert(anaDatas, anaDevData)
+    table.insert(OPCs, devOPCs)
+    table.insert(cdbs, devCdb) 
+  end
   local model = ClustDotModel(pwTrData.maxFeat+1, Hp, anaTrData.maxFeat+1, Ha, Hs,
-    maxNumMents, maxNumClusts, fl, fn, wl,cuda,anteSerFi, anaSerFi, dop)
+    maxNumMents, maxNumClusts, fl, fn, wl,cuda,anteSerFi, anaSerFi, opts.fdop)
   local statez = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}} 
   local deltTensor = cuda and torch.ones(1,1):cuda() or torch.ones(1,1)
   local keepGoing = true
@@ -548,8 +552,8 @@ cmd:text('Options')
 cmd:option('-Hp', 700, 'Pairwise network hidden layer size')
 cmd:option('-Ha', 200, 'Anaphoricity network hidden layer size')
 cmd:option('-Hs', 200, 'Cluster embedding size')
-cmd:option('-trainClustFile', '../TrainOPCs.txt', 'Train Oracle Predicted Clustering File')
-cmd:option('-devClustFile', '../DevOPCs.txt', 'Train Oracle Predicted Clustering File')
+cmd:option('-trainClustFile', '../SMALLTrainOPCs.txt', 'Train Oracle Predicted Clustering File')
+cmd:option('-devClustFile', '../SMALLDevOPCs.txt', 'Train Oracle Predicted Clustering File')
 cmd:option('-pwTrFeatPrefix', 'train_small', 'Expects train pairwise features in <pwTrFeatPfx>-pw-*.h5')
 cmd:option('-pwDevFeatPrefix', 'dev_small', 'Expects dev pairwise features in <pwDevFeatPfx>-pw-*.h5')
 cmd:option('-anaTrFeatPrefix', 'train_small', 'Expects train anaphoricity features in <anaTrFeatPfx>-na-*.h5')
@@ -558,21 +562,23 @@ cmd:option('-nEpochs', 5, 'Max number of epochs to train')
 cmd:option('-fl', 0.5, 'False Link cost')
 cmd:option('-fn', 1.2, 'False New cost')
 cmd:option('-wl', 1, 'Wrong Link cost')
-cmd:option('-gpuid', -1, 'Gpu id (leave -1 for cpu)')
+cmd:option('-gpuid', -1, 'Gpu ID (leave -1 for cpu)')
 cmd:option('-save', false, 'Save model')
 cmd:option('-savePfx', 'simple', 'Prefixes saved model with this')
-cmd:option('-anteSerFi', 'models/small_700.model-pw-0.100000', 'serialized pre-trained antecedent ranking model')
-cmd:option('-anaSerFi', 'models/small_200.model-na-0.100000', 'serialized pre-training anaphoricity model')
-cmd:option('-PT', false, 'pretrain')
-cmd:option('-fdop', 0.4, 'dropout rate on local, f scorer')
-cmd:option('-cmdop', 0, 'dropout rate on mention embeddings')
-cmd:option('-nadop', 0, 'dropout rate on (cluster) NA MLP')
-cmd:option('-ldop', 0.3, 'dropout rate on lstm output')
-cmd:option('-clip', 10, 'clip gradients to lie in (-clip, clip)')
+cmd:option('-anteSerFi', 'models/small_700.model-pw-0.100000', 'Serialized pre-trained antecedent ranking model')
+cmd:option('-anaSerFi', 'models/small_200.model-na-0.100000', 'Serialized pre-trained anaphoricity model')
+cmd:option('-PT', false, 'Pretrain?')
+cmd:option('-fdop', 0.4, 'Dropout rate on local, f scorer')
+cmd:option('-cmdop', 0, 'Dropout rate on mention embeddings')
+cmd:option('-nadop', 0, 'Dropout rate on (cluster) NA MLP')
+cmd:option('-ldop', 0.3, 'Dropout rate on lstm output')
+cmd:option('-clip', 10, 'Clip gradients to lie in (-clip, clip)')
+cmd:option('-ignoreDev', false, 'Do not add development data to the training data')
 cmd:option('-loadAndPredict', false, 'Load full model and predict (on dev or test)')
-cmd:option('-savedPWNetFi', '', 'trained pairwise network')
-cmd:option('-savedNANetFi', '', 'trained NA network')
-cmd:option('-savedLSTMFi', '', 'trained lstm')
+cmd:option('-savedPWNetFi', '', 'Saved pairwise network model file (for prediction)')
+cmd:option('-savedNANetFi', '', 'Saved NA network model file (for prediction)')
+cmd:option('-savedLSTMFi', '', 'Saved lstm model file (for prediction)')
+
 cmd:text()
 
 -- Parse input options

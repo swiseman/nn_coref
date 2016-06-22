@@ -1,10 +1,12 @@
 # nn_coref
 Neural Coref Models, as described in 
 ["Learning Global Features for Coreference Resolution"](http://nlp.seas.harvard.edu/papers/corefmain.pdf), Sam Wiseman, Alexander M. Rush, and Stuart M. Shieber, NAACL 2016,
+
 and
+
 ["Learning Anaphoricity and Antecedent Ranking Features for Coreference Resolution"](http://people.seas.harvard.edu/~srush/acl15.pdf), Sam Wiseman, Alexander M. Rush, Stuart M. Shieber, and Jason Weston. ACL 2015.
 
-For questions/concerns/bugs please contact swiseman@seas.harvard.edu.
+For questions/concerns/bugs please contact swiseman at seas.harvard.edu.
 
 
 ## Overview
@@ -12,15 +14,7 @@ For questions/concerns/bugs please contact swiseman@seas.harvard.edu.
 To keep things simple, all the ACL code is now in a different branch. This README will cover duplicating the NAACL 2016 results.
 
 ## Generating Features
-First see the README in the modifiedBCS/ directory for instructions on setting up the data, and compiling the Scala feature and mention extractor.
-
-Then, run
-
-``` java -jar -Xmx30g modifiedBCS/target/scala-2.11/moarcoref-assembly-1.jar ++modifiedBCS/base.conf -execDir execdir -numberGenderData gender.data -animacyPath animate.unigrams.txt -inanimacyPath inanimate.unigrams.txt -trainPath flat_train_2012 -devPath flat_dev_2012 -testPath flat_test_2012  -mode SMALLER -conjType NONE -pairwiseFeats FINAL+MOARANAPH+MOARPW```
-
-to generate text feature files.
-
-To convert text feature files into hdf5 (to be consumed by Torch), run
+See the README in the modifiedBCS/ directory for running the Scala feature/mention extractor. Once you've generated text feature files, use text_feats_to_hdf_5_replacezero.py to convert them to hdf5 (to be consumed by Torch), as follows:
 
 ```python text_feats_to_hdf5_replacezero.py SMALL-FINAL+MOARANAPH+MOARPW-anaphTrainFeats.txt train_small ana -n 4 -r 14215```
 
@@ -34,20 +28,44 @@ To convert text feature files into hdf5 (to be consumed by Torch), run
 
 ```python text_feats_to_hdf5_replacezero.py SMALL-FINAL+MOARANAPH+MOARPW-pwTestFeats.txt test_small pw -n 4 -r 28394```
 
+The "-r" argument takes the index of a dummy feature used to replace features unseen in the training set; above it is set to be one greater than the number of training features (and should never be less than this). The "-n" argument controls the number of processes spawned by the script.
 
-## Running Experiments
-The script run_experiments.py contains code and commands for duplicating our experiments, from feature extraction from the CoNLL files through training and evaluation. To run this script, you need to have extracted the CoNLL files from OntoNotes using the instructions at http://conll.cemantix.org/2012/data.html, which should give you a single top-level directory containing a hierarchy of CoNLL files.
+You can also download bzipped hdf5 features here: https://drive.google.com/folderview?id=0B1ytQXPDuw7OVzI3MlRLMEFCcHM&usp=sharing 
 
-## Pre-extracted Features/Saved Models
-Pre-extracted Basic+ features (for train, dev, and test) can be downloaded here: https://drive.google.com/folderview?id=0B1ytQXPDuw7OYng1SGhFR0hRcnM&usp=sharing
+## Pre-training
+Given the hdf5 files generated in the previous step, you can pre-train anaphoricity and pairwise networks as follows:
 
-Saved Models (including antecedent and anaphoricity subtask networks, and g1 and g2 pre-trained networks) can be downloaded here: https://drive.google.com/folderview?id=0B1ytQXPDuw7OeU5ENnZXS0JsNGs&usp=sharing
+```th ana_model.lua```
 
-Both the features and saved models are bzipped, and must be bunzipped before you can use them.
+```th ante_model.lua```
+
+See the respective files for additional options and documentation.
+
+You can download bzipped pre-trained anaphoricity and pairwise networks from https://drive.google.com/folderview?id=0B1ytQXPDuw7OYUcwSEVPRjFEM00&usp=sharing , where they are called small_200.model-na-0.100000.bz2 and small_700.model-pw-0.100000.bz2, respectively.
+
+## Training the Full Model
+Assuming you've put your pre-trained networks in a directory called models/, you can now train the full model as follows:
+
+```th mr_clust_embed.lua -gpuid 0 -PT -save -savePfx trpldev```
+
+The default settings in mr_clust_embed.lua reflect those used in our final experiments (and so, for instance, both dev and train will be used as training data), but see the file for additional options and documentation.
+
+You can download bzipped trained full model components from https://drive.google.com/folderview?id=0B1ytQXPDuw7OYUcwSEVPRjFEM00&usp=sharing , where the relevant files are trpldev-mce-700-200.model-na.bz2, trpldev-mce-700-200.model-pw.bz2, and trpldev-mce-700-200.model-lstm.bz2
+
+## Predicting with Saved Models
+If you've trained (or downloaded) full model components, you can make predictions as follows:
+
+- If they don't exist, create the directories nn/bps/ and nn/conllouts/ .
+- Run ```th mr_clust_embed.lua -gpuid 0 -loadAndPredict -pwDevFeatPrefix test_small -anaDevFeatPrefix test_small -savedPWNetFi models/trpldev-mce-700-200.model-pw -savedNANetFi models/trpldev-mce-700-200.model-na -savedLSTMFi models/trpldevdup-mce-700-200.model-lstm```
+- The above will create a back-pointer file in bps/ . Suppose the file is called bps/xyzdev.bps . Then to generate a CoNLL output file, run ```../modifiedBCS/WriteCoNLLPreds.sh bps bps/xyzdev.bps conllouts ../flat_test_2012/ ../gender.data```
+- The resulting output file (in conllouts/) can now be scored using the standard CoNLL scorer.
+
+## Training the ACL (non-cluster) Model
+TODO
 
 ## Copyright
-Copyright (c) 2015 Sam Wiseman. All Rights Reserved.
+Copyright (c) 2016 Sam Wiseman. All Rights Reserved.
 
 ## License
-The code in this repository is covered a GNU GPL License. See LICENSE.txt.
+The code in this repository is covered by a GNU GPL License. See LICENSE.txt.
 
