@@ -24,7 +24,7 @@ function ANAModel.make(naD, hiddenUnary, c0, c1, dop)
     model.naNet = naNet
     
     -- make sure contiguous, and do sparse init while we're at it
-    checkContigAndSutsInit(naNet,15) 
+    recSutsInit(naNet,15) 
     model.naNet:get(1).weight[-1]:fill(0)
     
     collectgarbage()
@@ -133,7 +133,6 @@ end
 
 
 function train(naTrData,trTargets,naDevData,devTargets)
-  print(string.format("doing %d and %f", opts.H, opts.eta))
   local serFi = string.format("models/%s_%d.model", opts.savePrefix, opts.H)
   local anaModel = ANAModel.make(naTrData.maxFeat+1, opts.H, opts.c0, opts.c1, opts.dop)   
   local params, gradParams = anaModel.naNet:getParameters()

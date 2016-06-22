@@ -10,7 +10,6 @@ For questions/concerns/bugs please contact swiseman at seas.harvard.edu.
 
 
 ## Overview
-
 To keep things simple, all the ACL code is now in a different branch. This README will cover duplicating the NAACL 2016 results.
 
 ## Generating Features
@@ -32,19 +31,21 @@ The "-r" argument takes the index of a dummy feature used to replace features un
 
 You can also download bzipped hdf5 features here: https://drive.google.com/folderview?id=0B1ytQXPDuw7OVzI3MlRLMEFCcHM&usp=sharing 
 
+**Before doing any training or pre-training, please create a directory called nn/models/**
+
 ## Pre-training
 Given the hdf5 files generated in the previous step, you can pre-train anaphoricity and pairwise networks as follows:
 
 ```th ana_model.lua```
 
-```th ante_model.lua```
+```th ante_model.lua -gpuid 0```
 
 See the respective files for additional options and documentation.
 
 You can download bzipped pre-trained anaphoricity and pairwise networks from https://drive.google.com/folderview?id=0B1ytQXPDuw7OYUcwSEVPRjFEM00&usp=sharing , where they are called small_200.model-na-0.100000.bz2 and small_700.model-pw-0.100000.bz2, respectively.
 
 ## Training the Full Model
-Assuming you've put your pre-trained networks in a directory called models/, you can now train the full model as follows:
+Assuming you've put your pre-trained networks in nn/models/, you can now train the full model as follows:
 
 ```th mr_clust_embed.lua -gpuid 0 -PT -save -savePfx trpldev```
 
@@ -58,10 +59,23 @@ If you've trained (or downloaded) full model components, you can make prediction
 - If they don't exist, create the directories nn/bps/ and nn/conllouts/ .
 - Run ```th mr_clust_embed.lua -gpuid 0 -loadAndPredict -pwDevFeatPrefix test_small -anaDevFeatPrefix test_small -savedPWNetFi models/trpldev-mce-700-200.model-pw -savedNANetFi models/trpldev-mce-700-200.model-na -savedLSTMFi models/trpldevdup-mce-700-200.model-lstm```
 - The above will create a back-pointer file in bps/ . Suppose the file is called bps/xyzdev.bps . Then to generate a CoNLL output file, run ```../modifiedBCS/WriteCoNLLPreds.sh bps bps/xyzdev.bps conllouts ../flat_test_2012/ ../gender.data```
+    - N.B. You may need to modify the paths to the jar files on the second line of modifiedBCS/WriteCoNLLPreds.sh to get this to work
 - The resulting output file (in conllouts/) can now be scored using the standard CoNLL scorer.
 
+Training as in the previous sub-section and evaluating as above should produce results very close to those in the NAACL paper, and probably a bit better. After re-training the cleaned-up and re-factored version in this repo, I got P/R/F scores of:
+
+MUC: 77.14/70.12/73.46
+BCUB: 66.43/57.47/61.62
+CEAFe: 62.29/54.01/57.85
+CoNLL: 64.31
+
+
 ## Training the ACL (non-cluster) Model
-TODO
+The mention-ranking model from the ACL paper has been re-implemented and considerably simplified in vanilla_mr.lua. It can be run as follows:
+
+```th vanilla_mr.lua -gpuid 0 -PT```
+
+Unlike the original ACL implementation, this implementation is easy to run on a GPU, and with the new, even-smaller feature-set it should do at least as well. 
 
 ## Copyright
 Copyright (c) 2016 Sam Wiseman. All Rights Reserved.

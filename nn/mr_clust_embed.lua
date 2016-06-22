@@ -403,7 +403,7 @@ end
 
 
 function train(pwTrData,anaTrData,trOPCs,cdb,pwDevData,anaDevData,devOPCs,devCdb,Hp,Ha,Hs,
-              fl,fn,wl,nEpochs,save,savePfx,cuda,bpfi,anteSerFi,anaSerFi)
+              fl,fn,wl,nEpochs,save,savePfx,cuda,anteSerFi,anaSerFi)
   local maxNumMents, maxNumClusts = getMaxes(anaTrData,anaDevData,trOPCs,devOPCs)
   print(string.format("maxNumMents = %d, maxNumClusts = %d", maxNumMents, maxNumClusts))  
   local serFi = string.format("models/%s-mce-%d-%d.model", savePfx, Hp, Hs)
@@ -514,9 +514,6 @@ function train(pwTrData,anaTrData,trOPCs,cdb,pwDevData,anaDevData,devOPCs,devCdb
                        model.naScorer:get(1):get(2):get(5).gradBias,eta1,statez[19])                                 
       end
     end
-    model.naScorer:evaluate()
-    model.pwNet:evaluate()
-    model.lstm:evaluate()  
     if save then
       print("overwriting params...")
       torch.save(serFi.."-na", model.naScorer)
@@ -623,12 +620,9 @@ function main()
       end
     end   
     print(opts)
-    local bpfi = "bps/" .. tostring(os.time()) .. "dev.bps"
-    print("using bpfi: " .. bpfi)
     train(pwTrData,anaTrData,trOPCs,cdb,pwDevData,anaDevData,devOPCs,devCdb,opts.Hp,opts.Ha,
       opts.Hs,opts.fl,opts.fn,opts.wl,opts.nEpochs,opts.save,opts.savePfx,opts.gpuid >= 0,
-      bpfi,opts.PT and opts.anteSerFi or false, opts.PT and opts.anaSerFi or false)
-       
+      opts.PT and opts.anteSerFi or false, opts.PT and opts.anaSerFi or false)
   else
     require 'cutorch'
     require 'cunn'    

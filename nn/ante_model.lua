@@ -24,7 +24,7 @@ do
     pwNet:add(nn.Linear(hiddenPW,1))    
     
     -- make sure contiguous, and do sparse init while we're at it
-    checkContigAndSutsInit(pwNet,15)
+    recSutsInit(pwNet,15)
     pwNet:get(1).weight[-1]:fill(0) -- assume last feature is a dummy, padding feature
     self.pwNet = cuda and pwNet:cuda() or pwNet
     collectgarbage()
@@ -102,7 +102,7 @@ function train(pwData,clusts,pwDevData,devClusts,cuda)
   local params, gradParams = anteModel.pwNet:getParameters()
   local optState = {}
   local deltTensor = cuda and torch.ones(1,1):cuda() or torch.ones(1,1)
-  for t = 1, opts.numEpochs do
+  for t = 1, opts.nEpochs do
     print("epoch: " .. tostring(t))
     anteModel.pwNet:training()
     -- use document sized minibatches
