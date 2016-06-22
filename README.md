@@ -10,7 +10,7 @@ For questions/concerns/bugs please contact swiseman at seas.harvard.edu.
 
 
 ## Overview
-To keep things simple, all the ACL code is now in a different branch. This README will cover duplicating the NAACL 2016 results.
+To keep things simple, the original ACL code is now in the acl15 branch. This README will cover duplicating the NAACL 2016 results.
 
 ## Generating Features
 See the README in the modifiedBCS/ directory for running the Scala feature/mention extractor. Once you've generated text feature files, use text_feats_to_hdf_5_replacezero.py to convert them to hdf5 (to be consumed by Torch), as follows:
@@ -65,8 +65,11 @@ If you've trained (or downloaded) full model components, you can make prediction
 Training as in the previous sub-section and evaluating as above should produce results very close to those in the NAACL paper, and probably a bit better. After re-training the cleaned-up and re-factored version in this repo, I got P/R/F scores of:
 
 MUC: 77.14/70.12/73.46
+
 BCUB: 66.43/57.47/61.62
+
 CEAFe: 62.29/54.01/57.85
+
 CoNLL: 64.31
 
 
