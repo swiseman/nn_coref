@@ -12,6 +12,9 @@ For questions/concerns/bugs please contact swiseman at seas.harvard.edu.
 ## Overview
 To keep things simple, the original ACL code is now in the acl15 branch. This README will cover duplicating the NAACL 2016 results.
 
+## Prerequisites
+In addition to torch, nn, and the prerequisites listed in modifiedBCS/README.md, you will need the Element-Research rnn library: https://github.com/Element-Research/rnn
+
 ## Generating Features
 See the README in the modifiedBCS/ directory for running the Scala feature/mention extractor. Once you've generated text feature files, use text_feats_to_hdf_5_replacezero.py to convert them to hdf5 (to be consumed by Torch), as follows:
 
