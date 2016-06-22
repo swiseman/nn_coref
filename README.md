@@ -72,7 +72,6 @@ CEAFe: 62.29/54.01/57.85
 
 CoNLL: 64.31
 
-
 ## Training the ACL (non-cluster) Model
 The mention-ranking model from the ACL paper has been re-implemented and considerably simplified in vanilla_mr.lua. It can be run as follows:
 
