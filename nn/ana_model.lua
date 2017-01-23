@@ -159,7 +159,7 @@ function train(naTrData,trTargets,naDevData,devTargets)
     local prec,rec,currF = anaModel:getDevF(naDevData,devTargets)
   end
 
-  if save then
+  if opts.save then
     print("overwriting params...")
     torch.save(serFi .. string.format("-na-%f",opts.eta), anaModel.naNet)
   end
