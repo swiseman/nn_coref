@@ -12,7 +12,7 @@ import edu.berkeley.nlp.coref.ConjType;
 public class MiniDriver implements Runnable {
   
   @Option(gloss = "Which experiment to run?")
-  public static Mode mode = Mode.WRITE_FEATS_SEP;
+  public static Mode mode = Mode.SMALLER;
   @Option(gloss = "Language choice")
   public static Language lang = Language.ENGLISH;
   
