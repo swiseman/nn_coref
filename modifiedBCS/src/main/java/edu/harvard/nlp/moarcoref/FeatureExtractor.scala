@@ -6,7 +6,7 @@ import scala.collection.JavaConverters.mapAsScalaMapConverter
 import scala.collection.immutable.TreeMap
 
 import edu.berkeley.nlp.coref.CorefFeaturizerTrainer
-// import edu.berkeley.nlp.coref.CorefSystem
+import edu.berkeley.nlp.coref.CorefSystem
 import edu.berkeley.nlp.coref.DocumentGraph
 import edu.berkeley.nlp.coref.NumberGenderComputer
 import edu.berkeley.nlp.coref.PairwiseIndexingFeaturizerJoint
@@ -23,7 +23,7 @@ object FeatureExtractor {
     val numberGenderComputer = NumberGenderComputer.readBergsmaLinData(MiniDriver.numberGenderDataPath);
     // require(!MiniDriver.trainOnGold);
 
-    var trainDocs = SmallerCorefSystem.loadCorefDocs(MiniDriver.trainPath, MiniDriver.trainSize, numberGenderComputer, MiniDriver.trainOnGold);
+    var trainDocs = CorefSystem.loadCorefDocs(MiniDriver.trainPath, MiniDriver.trainSize, numberGenderComputer, MiniDriver.useGoldMentions);
     var trainDocGraphsOrigOrder = trainDocs.map(new DocumentGraph(_, true));
     var trainDocGraphs = if (MiniDriver.randomizeTrain) new scala.util.Random(0).shuffle(trainDocGraphsOrigOrder.sortBy(_.corefDoc.rawDoc.printableDocName)) else trainDocGraphsOrigOrder;   
     
@@ -89,7 +89,7 @@ object FeatureExtractor {
     trainDocGraphsOrigOrder = null;
     trainDocGraphs = null;
 
-    var devDocs = SmallerCorefSystem.loadCorefDocs(MiniDriver.devPath, MiniDriver.devSize, numberGenderComputer, MiniDriver.trainOnGold);
+    var devDocs = CorefSystem.loadCorefDocs(MiniDriver.devPath, MiniDriver.devSize, numberGenderComputer, MiniDriver.trainOnGold);
     var devDocGraphs = devDocs.map(new DocumentGraph(_, false)).sortBy(_.corefDoc.rawDoc.printableDocName);
     featurizerTrainer.featurizeBasic(devDocGraphs, anaphFeaturizer); // dev docs already know they are dev docs so they don't add features
     TextPickler.writeAnaphFeats(devDocGraphs, pfx + "-" + MiniDriver.pairwiseFeats + "-" + "anaphDevFeats.txt");
@@ -103,7 +103,7 @@ object FeatureExtractor {
     // do test docs
     devDocs = null;
     devDocGraphs = null;
-    var testDocs = SmallerCorefSystem.loadCorefDocs(MiniDriver.testPath, MiniDriver.testSize, numberGenderComputer, MiniDriver.trainOnGold);
+    var testDocs = CorefSystem.loadCorefDocs(MiniDriver.testPath, MiniDriver.testSize, numberGenderComputer, MiniDriver.trainOnGold);
       
     var testDocGraphs = testDocs.map(new DocumentGraph(_, false)).sortBy(_.corefDoc.rawDoc.printableDocName);
     featurizerTrainer.featurizeBasic(testDocGraphs, anaphFeaturizer); // test docs already know they are test docs so they don't add features
