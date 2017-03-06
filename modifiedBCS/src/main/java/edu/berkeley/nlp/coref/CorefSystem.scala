@@ -60,7 +60,7 @@ object CorefSystem {
   
   def loadCorefDocs(path: String, size: Int, numberGenderComputer: NumberGenderComputer, gold: Boolean): Seq[CorefDoc] = {
     val docs = loadRawConllDocs(path, size, gold);
-    val assembler = CorefDocAssembler(Driver.lang, Driver.useGoldMentions);
+    val assembler = CorefDocAssembler(Driver.lang, gold);
     val mentionPropertyComputer = new MentionPropertyComputer(numberGenderComputer);
     val corefDocs = docs.map(doc => assembler.createCorefDoc(doc, mentionPropertyComputer));
     CorefDoc.checkGoldMentionRecall(corefDocs);

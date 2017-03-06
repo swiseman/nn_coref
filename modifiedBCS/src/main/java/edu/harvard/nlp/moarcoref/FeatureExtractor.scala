@@ -21,9 +21,9 @@ object FeatureExtractor {
     var pfx = (if (smaller) "SMALL" else "BIG");
     Logger.logss("Using conjType = " + MiniDriver.conjType);
     val numberGenderComputer = NumberGenderComputer.readBergsmaLinData(MiniDriver.numberGenderDataPath);
-    require(!MiniDriver.trainOnGold);
+    // require(!MiniDriver.trainOnGold);
 
-    var trainDocs = CorefSystem.loadCorefDocs(MiniDriver.trainPath, MiniDriver.trainSize, numberGenderComputer, MiniDriver.trainOnGold);
+    var trainDocs = CorefSystem.loadCorefDocs(MiniDriver.trainPath, MiniDriver.trainSize, numberGenderComputer, MiniDriver.useGoldMentions);
     var trainDocGraphsOrigOrder = trainDocs.map(new DocumentGraph(_, true));
     var trainDocGraphs = if (MiniDriver.randomizeTrain) new scala.util.Random(0).shuffle(trainDocGraphsOrigOrder.sortBy(_.corefDoc.rawDoc.printableDocName)) else trainDocGraphsOrigOrder;   
     
@@ -89,7 +89,7 @@ object FeatureExtractor {
     trainDocGraphsOrigOrder = null;
     trainDocGraphs = null;
 
-    var devDocs = CorefSystem.loadCorefDocs(MiniDriver.devPath, MiniDriver.devSize, numberGenderComputer, MiniDriver.trainOnGold);
+    var devDocs = CorefSystem.loadCorefDocs(MiniDriver.devPath, MiniDriver.devSize, numberGenderComputer, MiniDriver.useGoldMentions);
     var devDocGraphs = devDocs.map(new DocumentGraph(_, false)).sortBy(_.corefDoc.rawDoc.printableDocName);
     featurizerTrainer.featurizeBasic(devDocGraphs, anaphFeaturizer); // dev docs already know they are dev docs so they don't add features
     TextPickler.writeAnaphFeats(devDocGraphs, pfx + "-" + MiniDriver.pairwiseFeats + "-" + "anaphDevFeats.txt");
@@ -103,7 +103,7 @@ object FeatureExtractor {
     // do test docs
     devDocs = null;
     devDocGraphs = null;
-    var testDocs = CorefSystem.loadCorefDocs(MiniDriver.testPath, MiniDriver.testSize, numberGenderComputer, MiniDriver.trainOnGold);
+    var testDocs = CorefSystem.loadCorefDocs(MiniDriver.testPath, MiniDriver.testSize, numberGenderComputer, MiniDriver.useGoldMentions);
       
     var testDocGraphs = testDocs.map(new DocumentGraph(_, false)).sortBy(_.corefDoc.rawDoc.printableDocName);
     featurizerTrainer.featurizeBasic(testDocGraphs, anaphFeaturizer); // test docs already know they are test docs so they don't add features
