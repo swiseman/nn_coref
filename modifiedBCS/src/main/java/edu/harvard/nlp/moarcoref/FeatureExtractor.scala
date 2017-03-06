@@ -89,7 +89,7 @@ object FeatureExtractor {
     trainDocGraphsOrigOrder = null;
     trainDocGraphs = null;
 
-    var devDocs = CorefSystem.loadCorefDocs(MiniDriver.devPath, MiniDriver.devSize, numberGenderComputer, MiniDriver.trainOnGold);
+    var devDocs = CorefSystem.loadCorefDocs(MiniDriver.devPath, MiniDriver.devSize, numberGenderComputer, MiniDriver.useGoldMentions);
     var devDocGraphs = devDocs.map(new DocumentGraph(_, false)).sortBy(_.corefDoc.rawDoc.printableDocName);
     featurizerTrainer.featurizeBasic(devDocGraphs, anaphFeaturizer); // dev docs already know they are dev docs so they don't add features
     TextPickler.writeAnaphFeats(devDocGraphs, pfx + "-" + MiniDriver.pairwiseFeats + "-" + "anaphDevFeats.txt");
@@ -103,7 +103,7 @@ object FeatureExtractor {
     // do test docs
     devDocs = null;
     devDocGraphs = null;
-    var testDocs = CorefSystem.loadCorefDocs(MiniDriver.testPath, MiniDriver.testSize, numberGenderComputer, MiniDriver.trainOnGold);
+    var testDocs = CorefSystem.loadCorefDocs(MiniDriver.testPath, MiniDriver.testSize, numberGenderComputer, MiniDriver.useGoldMentions);
       
     var testDocGraphs = testDocs.map(new DocumentGraph(_, false)).sortBy(_.corefDoc.rawDoc.printableDocName);
     featurizerTrainer.featurizeBasic(testDocGraphs, anaphFeaturizer); // test docs already know they are test docs so they don't add features
